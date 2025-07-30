@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <%- include('header') %>
+
+    <section class="report-section">
+        <h1>Student Report Card</h1>
+        <%# ejs comment %>
+
+            <ul>
+                <% student.map((stud)=>{ %>
+                    <li>
+                        <p>Name : <%= stud.name %></p>
+                        <p>Grade : <%= stud.grade %></p>
+                        <p>Favourate Subject : <%= stud.favSubject %></p>
+                    </li>
+                    <% }) %>
+            </ul>
+    </section>
+    <!-- <%- include('footer') %> -->
+</body>
+
+</html>

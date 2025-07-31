@@ -1,28 +1,16 @@
 import crypto from "crypto";
-import {
-  getLinkByShortCode,
-  loadLinks,
-  saveLinks,
-} from "../models/shortener.model.js";
-import { readFile } from "fs/promises";
-import { join } from "path";
+// import {
+//   getLinkByShortCode,
+//   loadLinks,
+//   saveLinks,
+// } from "../models/shortener.model.js";
+
+import { urls } from "../schema/url_schema.js";
 
 export const getShortenerPage = async (req, res) => {
   try {
-    // const file = await readFile(join("views", "index.html"));
-    const links = await loadLinks();
-
-    // const content = file.toString().replaceAll(
-    //   "{{ shortened_urls }}",
-    //   Object.entries(links)
-    //     .map(([shortCode, url]) => {
-    //       const truncatedURL =
-    //         url.length >= 30 ? `${url.slice(0, 30)}...` : url;
-    //       return `<li>${truncatedURL} -> <a href="/${shortCode}" target="_blank">${req.host}/${shortCode}</a></li>`;
-    //     })
-    //     .join("")
-    // );
-    // return res.send(content);
+    // const links = await loadLinks();
+    const links = await urls.find();
 
     return res.render("index", { links, host: req.host });
   } catch (error) {
@@ -36,7 +24,8 @@ export const postURLShortener = async (req, res) => {
     const { url, shortCode } = req.body;
     const finalShortCode = shortCode || crypto.randomBytes(4).toString("hex");
 
-    const links = await loadLinks();
+    // const links = await loadLinks();
+    const links = await urls.find();
 
     if (links[finalShortCode]) {
       return res
@@ -46,7 +35,8 @@ export const postURLShortener = async (req, res) => {
 
     // links[finalShortCode] = url;
     // await saveLinks(links);
-    await saveLinks({ url, shortCode });
+    // await saveLinks({ url, shortCode });
+    await urls.create({ url, shortCode });
 
     return res.redirect("/");
   } catch (error) {
@@ -58,10 +48,9 @@ export const postURLShortener = async (req, res) => {
 export const redirectToShortLink = async (req, res) => {
   try {
     const { shortCode } = req.params;
-    // const links = await loadLinks();
-    const links = await getLinkByShortCode(shortCode);
+    // const links = await getLinkByShortCode(shortCode);
+    const links = await urls.findOne({ shortCode: shortCode });
 
-    // if (!links[shortCode]) return res.status(404).send("404 error occurred");
     if (!links) return res.status(404).send("404 error occurred");
 
     return res.redirect(links.url);

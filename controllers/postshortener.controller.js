@@ -5,12 +5,15 @@ import crypto from "crypto";
 //   saveLinks,
 // } from "../models/shortener.model.js";
 
-import { urls } from "../schema/url_schema.js";
+import {
+  getAllShortLinks,
+  getShortLinkByShortCode,
+  insertShortLink,
+} from "../services/shortener.services.js";
 
 export const getShortenerPage = async (req, res) => {
   try {
-    // const links = await loadLinks();
-    const links = await urls.find();
+    const links = await getAllShortLinks();
 
     return res.render("index", { links, host: req.host });
   } catch (error) {
@@ -24,19 +27,15 @@ export const postURLShortener = async (req, res) => {
     const { url, shortCode } = req.body;
     const finalShortCode = shortCode || crypto.randomBytes(4).toString("hex");
 
-    // const links = await loadLinks();
-    const links = await urls.find();
+    const links = await getShortLinkByShortCode(finalShortCode);
 
-    if (links[finalShortCode]) {
+    if (links) {
       return res
         .status(400)
         .send("Short code already exists. Please choose another");
     }
 
-    // links[finalShortCode] = url;
-    // await saveLinks(links);
-    // await saveLinks({ url, shortCode });
-    await urls.create({ url, shortCode });
+    await insertShortLink({ url, finalShortCode });
 
     return res.redirect("/");
   } catch (error) {
@@ -48,8 +47,8 @@ export const postURLShortener = async (req, res) => {
 export const redirectToShortLink = async (req, res) => {
   try {
     const { shortCode } = req.params;
-    // const links = await getLinkByShortCode(shortCode);
-    const links = await urls.findOne({ shortCode: shortCode });
+
+    const links = await getShortLinkByShortCode(shortCode);
 
     if (!links) return res.status(404).send("404 error occurred");
 

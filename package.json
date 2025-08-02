@@ -4,18 +4,26 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "node --env-file=.env --watch app.js",
-    "start": "node app.js"
+    "dev": "node --env-file=.env --watch app.js ",
+    "start": "node --env-file=.env app.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
   },
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
     "chalk": "^5.4.1",
+    "drizzle-orm": "^0.44.4",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
     "mongodb": "^6.18.0",
     "mongoose": "^8.17.0",
+    "mysql2": "^3.14.3",
     "zod": "^4.0.5"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.4"
   }
 }

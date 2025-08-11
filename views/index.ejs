@@ -9,37 +9,45 @@
 </head>
 
 <body>
-    <div class="container">
-        <h1>URL Shortener</h1>
-        <form action="/" method="post">
-            <div>
-                <label for="url">Enter URL: </label>
-                <input type="url" name="url" id="url" required>
-            </div>
-            <div>
-                <label for="shortCode">Enter shortCode: </label>
-                <input type="text" name="shortCode" id="shortCode" required>
-            </div>
-            <button type="submit">Shorten</button>
-        </form>
-        <h2>Shortened URLs</h2>
-        <ul>
-            <!-- {{ shortened_urls }} -->
+    <%- include('./partials/header.ejs') %>
 
-            <!-- if it is an object  -->
-            <%# Object.entries(links).forEach(([shortCode, url])=> { %>
+        <% if(isloggedIn){ %>
+            <h1>you are logged in</h1>
+            <% }else {%>
+                <h1>you are not logged in</h1>
+                <% } %>
 
-                <% links.map(({ shortCode, url })=> { %>
-                    <% const truncatedURL=url.length>= 30 ? `${url.slice(0, 30)}...` : url; %>
-                        <li>
-                            <%= truncatedURL %> ->
-                                <a href="/<%= shortCode %>" target="_blank">
-                                    <%= host %>/<%= shortCode %>
-                                </a>
-                        </li>
-                        <% }) %>
-        </ul>
-    </div>
+                    <div class="container">
+                        <h1>URL Shortener</h1>
+                        <form action="/" method="post">
+                            <div>
+                                <label for="url">Enter URL: </label>
+                                <input type="url" name="url" id="url" required>
+                            </div>
+                            <div>
+                                <label for="shortCode">Enter shortCode: </label>
+                                <input type="text" name="shortCode" id="shortCode" required>
+                            </div>
+                            <button type="submit">Shorten</button>
+                        </form>
+                        <h2>Shortened URLs</h2>
+                        <ul>
+                            <!-- {{ shortened_urls }} -->
+
+                            <!-- if it is an object  -->
+                            <%# Object.entries(links).forEach(([shortCode, url])=> { %>
+
+                                <% links.map(({ shortCode, url })=> { %>
+                                    <% const truncatedURL=url.length>= 30 ? `${url.slice(0, 30)}...` : url; %>
+                                        <li>
+                                            <%= truncatedURL %> ->
+                                                <a href="/<%= shortCode %>" target="_blank">
+                                                    <%= host %>/<%= shortCode %>
+                                                </a>
+                                        </li>
+                                        <% }) %>
+                        </ul>
+                    </div>
 </body>
 
 </html>

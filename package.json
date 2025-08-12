@@ -14,11 +14,13 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "argon2": "^0.44.0",
     "chalk": "^5.4.1",
     "cookie-parser": "^1.4.7",
     "drizzle-orm": "^0.44.4",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.18.0",
     "mongoose": "^8.17.0",
     "mysql2": "^3.14.3",

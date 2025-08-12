@@ -1,4 +1,10 @@
-import { createUser, getUserByEmail } from "../services/auth.services.js";
+import {
+  createUser,
+  generateToken,
+  getUserByEmail,
+  hashPassword,
+  verifyPassword,
+} from "../services/auth.services.js";
 
 export const getRegisterPage = (req, res) => {
   return res.render("../views/auth/register");
@@ -11,7 +17,9 @@ export const postRegister = async (req, res) => {
   console.log("userExists: ", userExists);
   if (userExists) return res.redirect("/register");
 
-  const [user] = await createUser({ name, email, password });
+  const hasedPassword = await hashPassword(password);
+
+  const [user] = await createUser({ name, email, password: hasedPassword });
   console.log(user);
 
   res.redirect("/login");
@@ -28,9 +36,19 @@ export const postLogin = async (req, res) => {
 
   if (!user) return res.redirect("/login");
 
-  if (user.password !== password) return res.redirect("/login");
+  const isPasswordValid = await verifyPassword(user.password, password);
 
-  // res.setHeader("Set-Cookie", "isLoggedIn=true; path=/;");
-  res.cookie("isLoggedIn", true); // cookie-parser and express automatically set the path to / by default.
+  if (!isPasswordValid) return res.redirect("/login");
+
+  // res.cookie("isLoggedIn", true); // cookie-parser and express automatically set the path to / by default.
+  
+  const token = generateToken({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+  })
+  
+  res.cookie("access_token", token)
+
   res.redirect("/");
 };

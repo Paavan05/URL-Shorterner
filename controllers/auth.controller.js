@@ -9,7 +9,7 @@ import {
 export const getRegisterPage = (req, res) => {
   if (req.user) return res.redirect("/");
 
-  return res.render("../views/auth/register");
+  return res.render("../views/auth/register", { errors: req.flash("errors") });
 };
 
 export const postRegister = async (req, res) => {
@@ -19,7 +19,12 @@ export const postRegister = async (req, res) => {
 
   const userExists = await getUserByEmail(email);
   console.log("userExists: ", userExists);
-  if (userExists) return res.redirect("/register");
+
+  // if (userExists) return res.redirect("/register");
+  if (userExists) {
+    req.flash("errors", "User already exists");
+    return res.redirect("/register");
+  }
 
   const hasedPassword = await hashPassword(password);
 
@@ -32,7 +37,7 @@ export const postRegister = async (req, res) => {
 export const getLoginPage = (req, res) => {
   if (req.user) return res.redirect("/");
 
-  return res.render("auth/login"); // ejs takes views folder as default to search files, so you don't need to write ../views/
+  return res.render("auth/login", { errors: req.flash("errors") }); // ejs takes views folder as default to search files, so you don't need to write ../views/
 };
 
 export const postLogin = async (req, res) => {
@@ -42,12 +47,18 @@ export const postLogin = async (req, res) => {
 
   const user = await getUserByEmail(email);
 
-  if (!user) return res.redirect("/login");
+  if (!user) {
+    req.flash("errors", "Invalid email or password");
+    return res.redirect("/login");
+  }
 
   const isPasswordValid = await verifyPassword(user.password, password);
 
-  if (!isPasswordValid) return res.redirect("/login");
+  if (!isPasswordValid) {
+    req.flash("errors", "Invalid email or password");
 
+    return res.redirect("/login");
+  }
   // res.cookie("isLoggedIn", true); // cookie-parser and express automatically set the path to / by default.
 
   const token = generateToken({

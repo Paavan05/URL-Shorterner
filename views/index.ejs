@@ -11,6 +11,12 @@
 <body>
     <%- include('./partials/header.ejs') %>
 
+        <% if (user) { %>
+            <h2>Logged In</h2>
+            <%} else { %>
+                <h2>NOT Logged In</h2>
+                <%} %>
+
                     <div class="container">
                         <h1>URL Shortener</h1>
                         <form action="/" method="post">

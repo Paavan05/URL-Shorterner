@@ -3,6 +3,9 @@ import {
   getShortenerPage,
   postURLShortener,
   redirectToShortLink,
+  getShortenerEditPage,
+  deleteShortCode,
+  postShortenerEditPage,
 } from "../controllers/postshortener.controller.js";
 
 const router = Router();
@@ -31,5 +34,8 @@ router.get("/report", (req, res) => {
 router.get("/", getShortenerPage);
 router.post("/", postURLShortener);
 router.get("/:shortCode", redirectToShortLink);
+
+router.route("/edit/:id").get(getShortenerEditPage).post(postShortenerEditPage);
+router.route("/delete/:id").post(deleteShortCode);
 
 export const shortenerRoutes = router;

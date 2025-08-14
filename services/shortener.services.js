@@ -22,3 +22,22 @@ export const insertShortLink = async ({ url, finalShortCode, userId }) => {
     .insert(shortLinksTable)
     .values({ url, shortCode: finalShortCode, userId }); // url : url is same so you can write url one time
 };
+
+export const findShortLinkById = async (id) => {
+  const [result] = await db
+    .select()
+    .from(shortLinksTable)
+    .where(eq(shortLinksTable.id, id));
+  return result;
+};
+
+export const updateShortLink = async (url, shortCode, id) => {
+  return await db
+    .update(shortLinksTable)
+    .set({url, shortCode})
+    .where(eq(shortLinksTable.id, id));
+};
+
+export const deleteShortCodeById = async (id) => {
+  return await db.delete(shortLinksTable).where(eq(shortLinksTable.id, id));
+};

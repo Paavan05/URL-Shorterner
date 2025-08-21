@@ -1,6 +1,14 @@
 import {
+  ACCESS_TOKEN_EXPIRY,
+  REFRESH_TOKEN_EXPIRY,
+} from "../config/constants.js";
+import {
+  clearUserSession,
+  createAccessToken,
+  createRefreshToken,
+  createSession,
   createUser,
-  generateToken,
+  // generateToken,
   getUserByEmail,
   hashPassword,
   verifyPassword,
@@ -81,13 +89,38 @@ export const postLogin = async (req, res) => {
   }
   // res.cookie("isLoggedIn", true); // cookie-parser and express automatically set the path to / by default.
 
-  const token = generateToken({
+  // const token = generateToken({
+  //   id: user.id,
+  //   name: user.name,
+  //   email: user.email,
+  // });
+
+  // res.cookie("access_token", token);
+
+  const session = await createSession(user.id, {
+    ip: req.clientIp,
+    userAgent: req.headers["user-agent"],
+  });
+
+  const accessToken = createAccessToken({
     id: user.id,
     name: user.name,
     email: user.email,
+    sessionId: session.id,
   });
 
-  res.cookie("access_token", token);
+  const refreshToken = createRefreshToken(session.id);
+
+  const baseConfig = { httpOnly: true, secure: true };
+  res.cookie("access_token", accessToken, {
+    ...baseConfig,
+    maxAge: ACCESS_TOKEN_EXPIRY,
+  });
+
+  res.cookie("refresh_token", refreshToken, {
+    ...baseConfig,
+    maxAge: REFRESH_TOKEN_EXPIRY,
+  });
 
   res.redirect("/");
 };
@@ -98,7 +131,10 @@ export const getMe = (req, res) => {
   return res.send(`<h1>Hey ${req.user.name} - ${req.user.email}</h1>`);
 };
 
-export const logoutUser = (req, res) => {
+export const logoutUser = async (req, res) => {
+  await clearUserSession(req.user.sessionId);
+
   res.clearCookie("access_token");
+  res.clearCookie("refresh_token");
   res.redirect("/login");
 };

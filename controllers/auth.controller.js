@@ -3,6 +3,7 @@ import {
   REFRESH_TOKEN_EXPIRY,
 } from "../config/constants.js";
 import {
+  authenticateUser,
   clearUserSession,
   createAccessToken,
   createRefreshToken,
@@ -51,7 +52,12 @@ export const postRegister = async (req, res) => {
   const [user] = await createUser({ name, email, password: hasedPassword });
   console.log(user);
 
-  res.redirect("/login");
+  // res.redirect("/login");
+
+  // redirecting to home page after registration
+  await authenticateUser({ req, res, user, name, email });
+  res.redirect("/");
+
 };
 
 export const getLoginPage = (req, res) => {
@@ -96,31 +102,7 @@ export const postLogin = async (req, res) => {
   // });
 
   // res.cookie("access_token", token);
-
-  const session = await createSession(user.id, {
-    ip: req.clientIp,
-    userAgent: req.headers["user-agent"],
-  });
-
-  const accessToken = createAccessToken({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    sessionId: session.id,
-  });
-
-  const refreshToken = createRefreshToken(session.id);
-
-  const baseConfig = { httpOnly: true, secure: true };
-  res.cookie("access_token", accessToken, {
-    ...baseConfig,
-    maxAge: ACCESS_TOKEN_EXPIRY,
-  });
-
-  res.cookie("refresh_token", refreshToken, {
-    ...baseConfig,
-    maxAge: REFRESH_TOKEN_EXPIRY,
-  });
+  await authenticateUser({ req, res, user});
 
   res.redirect("/");
 };

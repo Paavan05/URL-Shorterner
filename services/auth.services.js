@@ -39,8 +39,8 @@ export const hashPassword = async (password) => {
   return await argon2.hash(password);
 };
 
-export const verifyPassword = async (hashPassword, password) => {
-  return await argon2.verify(hashPassword, password);
+export const comparePassword = async (password, hash) => {
+  return await argon2.verify(hash, password);
 };
 
 // export const generateToken = ({ id, name, email }) => {
@@ -273,4 +273,20 @@ export const sendNewVerifyEmailLink = async ({ email, userId }) => {
     subject: "Verify your email",
     html: htmlOutput,
   }).catch(console.error);
+};
+
+export const updateUserByName = async ({ userId, name }) => {
+  return await db
+    .update(usersTable)
+    .set({ name: name })
+    .where(eq(usersTable.id, userId));
+};
+
+export const updateUserPassword = async ({ userId, newPassword }) => {
+  const newHashPassword = await hashPassword(newPassword);
+
+  return await db
+    .update(usersTable)
+    .set({ password: newHashPassword })
+    .where(eq(usersTable.id, userId));
 };

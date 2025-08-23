@@ -2,21 +2,32 @@ import {
   ACCESS_TOKEN_EXPIRY,
   REFRESH_TOKEN_EXPIRY,
 } from "../config/constants.js";
+import { sendEmail } from "../lib/nodemailer.js";
 import {
   authenticateUser,
   clearUserSession,
+  clearVerifyEmailToken,
   createAccessToken,
   createRefreshToken,
   createSession,
   createUser,
+  createVerifyEmailLink,
+  findUserById,
+  findVerificationEmailToken,
+  generateRandomToken,
+  getAllShortLinks,
   // generateToken,
   getUserByEmail,
   hashPassword,
+  insertVerifyEmailToken,
+  sendNewVerifyEmailLink,
   verifyPassword,
+  verifyUserEmailAndUpdate,
 } from "../services/auth.services.js";
 import {
   loginUserSchema,
   registerUserSchema,
+  verifyEmailSchema,
 } from "../validators/auth-validator.js";
 
 export const getRegisterPage = (req, res) => {
@@ -56,8 +67,11 @@ export const postRegister = async (req, res) => {
 
   // redirecting to home page after registration
   await authenticateUser({ req, res, user, name, email });
-  res.redirect("/");
 
+  // verify user/email after registration
+  await sendNewVerifyEmailLink({ email, userId: user.id });
+
+  res.redirect("/");
 };
 
 export const getLoginPage = (req, res) => {
@@ -102,7 +116,7 @@ export const postLogin = async (req, res) => {
   // });
 
   // res.cookie("access_token", token);
-  await authenticateUser({ req, res, user});
+  await authenticateUser({ req, res, user });
 
   res.redirect("/");
 };
@@ -119,4 +133,65 @@ export const logoutUser = async (req, res) => {
   res.clearCookie("access_token");
   res.clearCookie("refresh_token");
   res.redirect("/login");
+};
+
+export const getProfilePage = async (req, res) => {
+  if (!req.user) return res.send("Not logged in");
+
+  const user = await findUserById(req.user.id);
+  if (!user) return res.redirect("/login");
+
+  const userShortLinks = await getAllShortLinks(user.id);
+
+  return res.render("auth/profile", {
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      isEmailValid: user.isEmailValid,
+      createdAt: user.createdAt,
+      links: userShortLinks,
+    },
+  });
+};
+
+export const getVerifyEmailPage = async (req, res) => {
+  // if (!req.user || req.user.isEmailValid) return res.redirect("/");
+
+  if (!req.user) return res.redirect("/");
+
+  const user = await findUserById(req.user.id);
+
+  if (!user || user.isEmailValid) return res.redirect("/");
+
+  return res.render("auth/verify-email", {
+    email: req.user.email,
+  });
+};
+
+export const resendVerificationLink = async (req, res) => {
+  if (!req.user) return res.redirect("/");
+  const user = await findUserById(req.user.id);
+  if (!user || user.isEmailValid) return res.redirect("/");
+
+  await sendNewVerifyEmailLink({ email: req.user.email, userId: req.user.id });
+
+  res.redirect("/verify-email");
+};
+
+export const verifyEmailToken = async (req, res) => {
+  const { data, error } = verifyEmailSchema.safeParse(req.query);
+  if (error) {
+    return res.send("Verification link invalid or expired!");
+  }
+
+  const [token] = await findVerificationEmailToken(data);
+  console.log("verifyEmailToken: ", token);
+  if (!token) return res.send("Verification link invalid or expired!");
+
+  await verifyUserEmailAndUpdate(token.email);
+
+  clearVerifyEmailToken(token.userId).catch(console.error);
+
+  return res.redirect("/profile");
 };

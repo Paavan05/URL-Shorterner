@@ -1,13 +1,20 @@
 import argon2 from "argon2";
 import jwt from "jsonwebtoken";
-import { eq } from "drizzle-orm";
+import { and, eq, gte, lt, sql } from "drizzle-orm";
 import { db } from "../config/db.js";
-import { sessionsTable, usersTable } from "../drizzle/schema.js";
+import {
+  sessionsTable,
+  shortLinksTable,
+  usersTable,
+  verifyEmailTokensTable,
+} from "../drizzle/schema.js";
+import crypto from "crypto";
 import {
   ACCESS_TOKEN_EXPIRY,
   MILLISECONDS_PER_SECOND,
   REFRESH_TOKEN_EXPIRY,
 } from "../config/constants.js";
+import { sendEmail } from "../lib/nodemailer.js";
 
 export const getUserByEmail = async (email) => {
   const [user] = await db
@@ -94,6 +101,7 @@ export const refreshTokens = async (refreshToken) => {
       id: user.id,
       name: user.name,
       email: user.email,
+      isEmailValid: user.isEmailValid,
       sessionId: currentSession.id,
     };
 
@@ -110,7 +118,7 @@ export const clearUserSession = async (sessionId) => {
   return await db.delete(sessionsTable).where(eq(sessionsTable.id, sessionId));
 };
 
-export const authenticateUser = async ({req,res, user, name, email}) => {
+export const authenticateUser = async ({ req, res, user, name, email }) => {
   const session = await createSession(user.id, {
     ip: req.clientIp,
     userAgent: req.headers["user-agent"],
@@ -120,6 +128,7 @@ export const authenticateUser = async ({req,res, user, name, email}) => {
     id: user.id,
     name: user.name || name,
     email: user.email || email,
+    isEmailValid: false,
     sessionId: session.id,
   });
 
@@ -135,4 +144,120 @@ export const authenticateUser = async ({req,res, user, name, email}) => {
     ...baseConfig,
     maxAge: REFRESH_TOKEN_EXPIRY,
   });
+};
+
+export const getAllShortLinks = async (userId) => {
+  return await db
+    .select()
+    .from(shortLinksTable)
+    .where(eq(shortLinksTable.userId, userId));
+};
+
+export const generateRandomToken = (digit = 8) => {
+  const min = 10 ** (digit - 1);
+  const max = 10 ** digit;
+
+  return crypto.randomInt(min, max).toString();
+};
+
+export const insertVerifyEmailToken = async ({ userId, token }) => {
+  return db.transaction(async (tx) => {
+    // tx stands for transaction, either fully complete or rollback to previous state
+    try {
+      await tx
+        .delete(verifyEmailTokensTable)
+        .where(lt(verifyEmailTokensTable.expiresAt, sql`CURRENT_TIMESTAMP`)); // deletes all the expired tokens
+
+      await tx
+        .delete(verifyEmailTokensTable)
+        .where(eq(verifyEmailTokensTable.userId, userId)); // deletes any existing tokens for this specific user i.e if user created the token but didn't verify it
+
+      await tx.insert(verifyEmailTokensTable).values({ userId, token }); // Insert the new token
+    } catch (error) {
+      console.log("failed to insert verification token: ", error);
+    }
+  });
+};
+
+// export const createVerifyEmailLink = async ({ email, token }) => {
+//   const uriEncodedEmail = encodeURIComponent(email);
+//   return `${process.env.FRONTEND_URL}/verify-email-token?token=${token}&email=${uriEncodedEmail}`;
+// };
+
+export const createVerifyEmailLink = async ({ email, token }) => {
+  const url = new URL(`${process.env.FRONTEND_URL}/verify-email-token`);
+
+  url.searchParams.append("token", token);
+  url.searchParams.append("email", email);
+
+  return url.toString();
+};
+// The URL API in JavaScript provides an easy way to construct, manipulate, and parse URLs without manual string concatenation. It ensures correct encoding, readability, and security when handling URLs.
+
+// const url = new URL("https://example.com/profile?id=42&theme=dark");
+
+// console.log(url.hostname); // "example.com"
+// console.log(url.pathname); // "/profile"
+// console.log(url.searchParams.get("id")); // "42"
+// console.log(url.searchParams.get("theme")); // "dark"
+
+// Why Use the URL API?
+// Easier URL Construction – No need for manual ? and & handling.
+// Automatic Encoding – Prevents issues with special characters.
+// Better Readability – Clean and maintainable code.
+
+export const findVerificationEmailToken = async ({ token, email }) => {
+  return await db
+    // .select({key: table.column})
+    .select({
+      userId: usersTable.id,
+      email: usersTable.email,
+      token: verifyEmailTokensTable.token,
+      expiresAt: verifyEmailTokensTable.expiresAt,
+    })
+    .from(verifyEmailTokensTable)
+    .where(
+      and(
+        eq(verifyEmailTokensTable.token, token),
+        gte(verifyEmailTokensTable.expiresAt, sql`CURRENT_TIMESTAMP`),
+        eq(usersTable.email, email)
+      )
+    )
+    .innerJoin(usersTable, eq(verifyEmailTokensTable.userId, usersTable.id));
+};
+
+export const verifyUserEmailAndUpdate = async (email) => {
+  return await db
+    .update(usersTable)
+    .set({ isEmailValid: true })
+    .where(eq(usersTable.email, email));
+};
+
+export const clearVerifyEmailToken = async (userId) => {
+  return await db
+    .delete(verifyEmailTokensTable)
+    .where(eq(verifyEmailTokensTable.userId, userId));
+};
+
+
+
+export const sendNewVerifyEmailLink = async ({email, userId}) => {
+  const randomToken = generateRandomToken();
+
+  await insertVerifyEmailToken({ userId, token: randomToken });
+
+  const verifyEmailLink = await createVerifyEmailLink({
+    email,
+    token: randomToken,
+  });
+
+  sendEmail({
+    to: email,
+    subject: "Verify your email",
+    html: `
+      <h1>Click the libelow to verify your emailnk</h1>
+      <p>You can use this token: <code>${randomToken}</code></p>
+      <a href="${verifyEmailLink}">Verify Email </a>
+      `,
+  }).catch(console.error);
 };

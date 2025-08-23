@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { boolean, text, timestamp } from "drizzle-orm/gel-core";
 import { int, mysqlTable, varchar } from "drizzle-orm/mysql-core";
 
@@ -19,7 +19,7 @@ export const sessionsTable = mysqlTable("sessions", {
   id: int().autoincrement().primaryKey(),
   userId: int("user_id")
     .notNull()
-    .references(() => usersTable.id, { onDelete: "cascade" }),
+    .references(() => usersTable.id, { onDelete: "cascade" }), // if user doesn't exists its data will get deleted
   valid: boolean().default(true).notNull(),
   userAgent: text("user_agent"),
   ip: varchar({ length: 255 }),
@@ -27,11 +27,25 @@ export const sessionsTable = mysqlTable("sessions", {
   updatedAt: timestamp("updated_at").defaultNow().$onUpdateFn().notNull(),
 });
 
+export const verifyEmailTokensTable = mysqlTable("is_email_valid", {
+  id: int().autoincrement().primaryKey(),
+  userId: int("user_id")
+    .notNull()
+    .references(() => usersTable.id, { onDelete: "cascade" }),
+  token: varchar({ length: 8 }).notNull(),
+  expiresAt: timestamp("expires_at")
+    // The brackets inside sql`` is necessary here, otherwise you would get syntax error.
+    .default(sql`(CURRENT_TIMESTAMP + INTERVAL 1 DAY)`)
+    .notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const usersTable = mysqlTable("users", {
   id: int().autoincrement().primaryKey(),
   name: varchar({ length: 255 }).notNull(),
   email: varchar({ length: 255 }).notNull().unique(),
   password: varchar({ length: 255 }).notNull(),
+  isEmailValid: boolean("is_email_valid").default(false).notNull(),
   createAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().$onUpdateFn().notNull(),
 });

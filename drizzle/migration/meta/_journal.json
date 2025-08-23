@@ -8,6 +8,27 @@
       "when": 1755769913353,
       "tag": "0000_flawless_oracle",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1755868436351,
+      "tag": "0001_smiling_sphinx",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1755878561910,
+      "tag": "0002_sloppy_moon_knight",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1755878843779,
+      "tag": "0003_long_rhodey",
+      "breakpoints": true
     }
   ]
 }

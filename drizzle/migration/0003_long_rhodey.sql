@@ -1,0 +1,1 @@
+ALTER TABLE `is_email_valid` MODIFY COLUMN `expires_at` timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP + INTERVAL 1 DAY);

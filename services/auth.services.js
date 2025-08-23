@@ -15,6 +15,10 @@ import {
   REFRESH_TOKEN_EXPIRY,
 } from "../config/constants.js";
 import { sendEmail } from "../lib/nodemailer.js";
+import path from "path";
+import fs from "fs/promises";
+import mjml2html from "mjml";
+import ejs from "ejs";
 
 export const getUserByEmail = async (email) => {
   const [user] = await db
@@ -239,9 +243,7 @@ export const clearVerifyEmailToken = async (userId) => {
     .where(eq(verifyEmailTokensTable.userId, userId));
 };
 
-
-
-export const sendNewVerifyEmailLink = async ({email, userId}) => {
+export const sendNewVerifyEmailLink = async ({ email, userId }) => {
   const randomToken = generateRandomToken();
 
   await insertVerifyEmailToken({ userId, token: randomToken });
@@ -251,13 +253,24 @@ export const sendNewVerifyEmailLink = async ({email, userId}) => {
     token: randomToken,
   });
 
+  // get the file data of verify-email.mjml mjml is used for email Templates to make it look good
+  const mjmlTemplate = await fs.readFile(
+    path.join(import.meta.dirname, "..", "emails", "verify-email.mjml"),
+    "utf-8"
+  );
+
+  // replace the placeholders with actual values
+  const filledTemplate = ejs.render(mjmlTemplate, {
+    code: randomToken,
+    link: verifyEmailLink,
+  });
+
+  // convert mjml to html
+  const htmlOutput = mjml2html(filledTemplate).html;
+
   sendEmail({
     to: email,
     subject: "Verify your email",
-    html: `
-      <h1>Click the libelow to verify your emailnk</h1>
-      <p>You can use this token: <code>${randomToken}</code></p>
-      <a href="${verifyEmailLink}">Verify Email </a>
-      `,
+    html: htmlOutput,
   }).catch(console.error);
 };

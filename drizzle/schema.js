@@ -1,6 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import { boolean, text, timestamp } from "drizzle-orm/gel-core";
-import { int, mysqlTable, varchar } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, varchar } from "drizzle-orm/mysql-core";
 
 // re-run the db:generate, db:migrate command whenever you make changes in this file/schema
 
@@ -53,11 +53,23 @@ export const passwordResetTokensTable = mysqlTable("password_reset_tokens", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const oauthAccountsTable = mysqlTable("oauth_accounts", {
+  id: int().autoincrement().primaryKey(),
+  userId: int("user_id")
+    .notNull()
+    .references(() => usersTable.id, { onDelete: "cascade" }),
+  provider: mysqlEnum("provider", ["google", "github"]).notNull(),
+  providerAccountId: varchar("provider_account_id", { length: 255 })
+    .notNull()
+    .unique(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const usersTable = mysqlTable("users", {
   id: int().autoincrement().primaryKey(),
   name: varchar({ length: 255 }).notNull(),
   email: varchar({ length: 255 }).notNull().unique(),
-  password: varchar({ length: 255 }).notNull(),
+  password: varchar({ length: 255 }),
   isEmailValid: boolean("is_email_valid").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().$onUpdateFn().notNull(),

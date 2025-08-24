@@ -2,21 +2,26 @@ import {
   ACCESS_TOKEN_EXPIRY,
   REFRESH_TOKEN_EXPIRY,
 } from "../config/constants.js";
-import { sendEmail } from "../lib/nodemailer.js";
+import { getHtmlFromMjmlTemplate } from "../lib/get-html-from-mjml-template.js";
+import { sendEmail } from "../lib/send-email.js";
 import {
   authenticateUser,
+  clearResetPasswordToken,
   clearUserSession,
   clearVerifyEmailToken,
   comparePassword,
   createAccessToken,
   createRefreshToken,
+  createResetPasswordLink,
   createSession,
   createUser,
   createVerifyEmailLink,
+  findUserByEmail,
   findUserById,
   findVerificationEmailToken,
   generateRandomToken,
   getAllShortLinks,
+  getResetPasswordToken,
   // generateToken,
   getUserByEmail,
   hashPassword,
@@ -27,10 +32,12 @@ import {
   verifyUserEmailAndUpdate,
 } from "../services/auth.services.js";
 import {
+  forgotPasswordSchema,
   loginUserSchema,
   registerUserSchema,
   verifyEmailSchema,
   verifyPasswordSchema,
+  verifyResetPasswordSchema,
   verifyUserSchema,
 } from "../validators/auth-validator.js";
 
@@ -259,3 +266,82 @@ export const postChangePassword = async (req, res) => {
 
   return res.redirect("/profile");
 };
+
+export const getResetPasswordPage = async (req, res) => {
+  return res.render("auth/forgot-password", {
+    formSubmitted: req.flash("formSubmitted")[0],
+    errors: req.flash("errors"),
+  });
+};
+
+export const postPorgotPassword = async (req, res) => {
+  const { data, error } = forgotPasswordSchema.safeParse(req.body);
+  if (error) {
+    const errorMessage = error.errors.map((err) => err.message);
+    req.flash("errors", errorMessage);
+    return res.redirect("/reset-password");
+  }
+
+  const user = await findUserByEmail(data.email);
+
+  if (user) {
+    const resetPasswordLink = await createResetPasswordLink({
+      userId: user.id,
+    });
+
+    const html = await getHtmlFromMjmlTemplate("reset-password-email", {
+      name: user.name,
+      link: resetPasswordLink,
+    });
+
+    sendEmail({
+      to: user.email,
+      subject: "Reset Your Passeord",
+      html,
+    });
+  }
+
+  req.flash("formSubmitted", true);
+  return res.redirect("/reset-password");
+};
+
+export const getResetPasswordTokenPage = async (req, res) => {
+  const { token } = req.params;
+
+  const passwordResetData = await getResetPasswordToken(token);
+  if (!passwordResetData) return res.render("auth/wrong-reset-password-token");
+
+  return res.render("auth/reset-password", {
+    formSubmitted: req.flash("formSubmitted")[0],
+    errors: req.flash("errors"),
+    token,
+  });
+};
+
+export const postResetPasswordToken = async (req, res) => {
+  const { token } = req.params;
+
+  const passwordResetData = await getResetPasswordToken(token);
+  if (!passwordResetData) {
+    req.flash("errors", "Password Token is not matching");
+    return res.render("auth/wrong-reset-password-token");
+  }
+
+  const { data, error } = verifyResetPasswordSchema.safeParse(req.body);
+  if (error) {
+    const errorMessage = error.errors.map((err) => err.message);
+    req.flash("errors", errorMessage);
+    return res.redirect(`/reset-password/${token}`);
+  }
+
+  const { newPassword } = data;
+  const user = await findUserById(passwordResetData.userId);
+
+  await clearResetPasswordToken(user.id);
+
+  await updateUserPassword({ userId: user.id, newPassword });
+
+  return res.redirect("/login");
+};
+
+

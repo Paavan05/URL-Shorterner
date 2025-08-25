@@ -1,6 +1,6 @@
 import argon2 from "argon2";
 import jwt from "jsonwebtoken";
-import { and, eq, gte, lt, sql } from "drizzle-orm";
+import { and, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import { db } from "../config/db.js";
 import {
   oauthAccountsTable,
@@ -372,10 +372,18 @@ export const linkUserWithOauth = async ({
   userId,
   provider,
   providerAccountId,
+  avatarUrl,
 }) => {
   await db
     .insert(oauthAccountsTable)
     .values({ userId, provider, providerAccountId });
+
+  if (avatarUrl) {
+    await db
+      .update(usersTable)
+      .set({ avatarUrl })
+      .where(and(eq(usersTable.id, userId), isNull(usersTable.avatarUrl)));
+  }
 };
 
 export const createUserWithOauth = async ({
@@ -383,11 +391,12 @@ export const createUserWithOauth = async ({
   email,
   provider,
   providerAccountId,
+  avatarUrl,
 }) => {
   const user = await db.transaction(async (trx) => {
     const [user] = await trx
       .insert(usersTable)
-      .values({ email, name, isEmailValid: true })
+      .values({ email, name, avatarUrl, isEmailValid: true })
       .$returningId();
 
     await trx

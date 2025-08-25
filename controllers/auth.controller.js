@@ -179,6 +179,7 @@ export const getProfilePage = async (req, res) => {
       email: user.email,
       isEmailValid: user.isEmailValid,
       hasPassword: Boolean(user.password),
+      avatarUrl: user.avatarUrl,
       createdAt: user.createdAt,
       links: userShortLinks,
     },
@@ -426,7 +427,7 @@ export const getGoogleLoginCallback = async (req, res) => {
   // console.log("token google: ", tokens);
 
   const claims = decodeIdToken(tokens.idToken());
-  const { sub: googleUserId, name, email } = claims;
+  const { sub: googleUserId, name, email, picture } = claims;
 
   // there are few things that we should do
   // Condition 1: User already exists with google's oauth linked
@@ -445,6 +446,7 @@ export const getGoogleLoginCallback = async (req, res) => {
       userId: user.id,
       provider: "google",
       providerAccountId: googleUserId,
+      avatarUrl: picture,
     });
   }
 
@@ -455,6 +457,7 @@ export const getGoogleLoginCallback = async (req, res) => {
       email,
       provider: "google",
       providerAccountId: googleUserId,
+      avatarUrl: picture,
     });
   }
   await authenticateUser({ req, res, user, name, email });
@@ -510,7 +513,7 @@ export const getGithubLoginCallback = async (req, res) => {
   });
   if (!githubUserResponse.ok) return handleFailedLogin();
   const githubUser = await githubUserResponse.json();
-  const { id: githubUserId, name } = githubUser;
+  const { id: githubUserId, name, avatar_url } = githubUser;
 
   const githubEmailResponse = await fetch(
     "https://api.github.com/user/emails",
@@ -541,6 +544,7 @@ export const getGithubLoginCallback = async (req, res) => {
       userId: user.id,
       provider: "github",
       providerAccountId: githubUserId,
+      avatarUrl: avatar_url,
     });
   }
 
@@ -550,6 +554,7 @@ export const getGithubLoginCallback = async (req, res) => {
       email,
       provider: "github",
       providerAccountId: githubUserId,
+      avatarUrl: avatar_url,
     });
   }
 

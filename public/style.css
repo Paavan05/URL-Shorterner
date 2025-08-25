@@ -715,6 +715,11 @@ footer .social-links a:hover {
   font-weight: 600;
 }
 
+.avatar-placeholder img{
+  border-radius: 50%;
+  width: 80px;
+}
+
 .profile-info {
   flex: 1;
 }

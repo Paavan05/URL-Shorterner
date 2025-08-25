@@ -57,7 +57,7 @@ export const postURLShortener = async (req, res) => {
 
       req.flash(
         "errors",
-        "Url with that shortcode already exists, please choose another"
+        "Url with that shortcode already exists, please choose another ShortCode"
       );
       return res.redirect("/");
     }

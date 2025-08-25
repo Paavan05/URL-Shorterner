@@ -13,18 +13,32 @@ import {
   insertShortLink,
   updateShortLink,
 } from "../services/shortener.services.js";
-import { shortenerSchema } from "../validators/shortener-validator.js";
+import {
+  shortenerSchema,
+  shortenerSearchParamsSchema,
+} from "../validators/shortener-validator.js";
 import z from "zod";
 
 export const getShortenerPage = async (req, res) => {
   try {
     if (!req.user) return res.redirect("/login");
 
-    const links = await getAllShortLinks(req.user.id);
+    const searchParams = shortenerSearchParamsSchema.parse(req.query);
+
+    // const links = await getAllShortLinks(req.user.id);
+    const { shortLinks, totalCount } = await getAllShortLinks({
+      userId: req.user.id,
+      limit: 10,
+      offset: (searchParams.page - 1) * 10,
+    });
+
+    const totalPages = Math.ceil(totalCount / 10);
 
     return res.render("index", {
-      links,
+      links: shortLinks,
       host: req.host,
+      currentPage: searchParams.page,
+      totalPages: totalPages,
       errors: req.flash("errors"),
     });
   } catch (error) {
@@ -127,7 +141,7 @@ export const postShortenerEditPage = async (req, res) => {
 
     await updateShortLink(url, shortCode, id);
 
-    return res.redirect("/")
+    return res.redirect("/");
   } catch (error) {
     console.log(error);
     return res.status(500).send("Internal server error");

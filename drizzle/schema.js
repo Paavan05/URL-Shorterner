@@ -8,7 +8,7 @@ export const shortLinksTable = mysqlTable("short_link", {
   id: int().autoincrement().primaryKey(),
   url: varchar({ length: 255 }).notNull(),
   shortCode: varchar("short_code", { length: 20 }).notNull().unique(),
-  createAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().$onUpdateFn().notNull(),
   userId: int("user_id")
     .notNull()
